@@ -1,0 +1,26 @@
+markdown: kramdown
+highlighter: pygments
+permalink: /posts/:title.html
+excerpt_separator: "<!-- more -->"
+
+host: 192.168.2.30
+github: freeyond
+author: "freeyond"
+email: 
+name: "freeyond"
+url: 
+domain: 
+all_categories: [
+["mediamux", "媒体封装格式","/posts/mediamux.html"], 
+]
+
+paginate: 2
+paginate_path: "posts/page:num"
+timezone: America/Los_Angeles
+
+collections:
+  docs:
+    output: true
+
+gems:
+ - jekyll-paginate

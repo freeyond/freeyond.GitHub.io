@@ -1,0 +1,71 @@
+---
+layout: post
+category: "mediamux"
+title:  "AVI文件封装格式"
+tags: [AVI,音视频,文件封装]
+---
+
+### 1.RIFF格式简介
+资源文件交换格式，Resource Interchange FileFormat（简称RIFF）。是一种按照标记区块存储数据（tagged chunks）的的通用文件存储格式，多用于存储音视频等多媒体数据。Microsoft在Windows下的AVI、ANI、WAV等都是基于RIFF格式的文件封装。
+
+
+### 2.RIFF文件结构
+RIFF文件结构是标准的树形结构，RIFF结构中包含两种节点：   
+（1）Leaf节点，该节点为叶子节点，不能包含子节点。   
+（2）Container节点，该节点可以包含Leaf节点。   
+Leaf节点的数据结构为：
+```
+typedef struct {
+    DWORD ID;           // 4字节，4个可打印ASCII字符，标识类型
+    DWORD Size;         // 4字节，数据块长度
+    BYTE  Data[Size];   // 数据块
+}Leaf
+```
+Container节点的数据结构为：
+```
+typedef struct {
+    DWORD ID;           // 4字节，4个可打印ASCII字符，标识类型
+    DWORD Size;         // 4字节，数据块长度
+    DWORD FormatType;   // 4字节，4个可打印ASCII字符，标识子类型
+                        // ID为“RIFF”时称为 FormatType
+                        // ID为“LIST”时称为 ListType
+    BYTE  Data[Size];   // 数据块
+}Container
+```
+下图展示的示例RIFF文件包含了：
+*  1个类型为“RIFF”的Container节点；
+*  1个类型为“LIST” 的Container节点；
+*  2个Leaf；
+
+其中“RIFF”包含“LIST”,“LIST”包含2个Leaf节点。  
+![](/posts/avimux_1.png)
+
+### 3.AVI文件格式分析
+AVI文件采用标准的RIFF格式，其结构是以类型为“RIFF”的节点为根节点的树状结构。  
+在AVI文件结构中类型为“RIFF”和“LIST”的节点是Container节点，一个AVI文件中只允许存在一个类型为“RIFF”的节点，类型为“LIST”的Container节点和Leaf节点没有限制。  
+一个典型的AVI文件结构如下图所示：  
+![](/posts/avimux_2.png)
+
+ListType为“movi”的Container的数据区域中保存的是音视频帧（audio sample、video sample）编码数据。  
+“movi”中的音视频帧封装在数据区中的Leaf节点中，“00dc”代表视频帧，“01wb”代表音频帧。  
+ID为“idx1”的Leaf的数据区中保存的是“movi”中音视频帧的索引，以数组方式排列，索引的结构为：  
+```
+typedef struct {
+    DWORD ID;           // 4字节，4个可打印ASCII字符，标识帧类型
+                        // “00dc”代表视频帧，“01wb”代表音频帧
+    DWORD flags;        // 4字节，标志位，0x00000010代表关键帧
+    DWORD offset;       // 4字节，“movi”节点的数据区中保存的帧节点相对于
+                        //“movi”节点ListType位置的偏移，也就是“movi”这
+                        // 个ListType的偏移（AVIMasterGUI中ChunkOffset）。
+    DWORD len;          // 4字节，当前帧的长度，等于包含当前帧的Leaf节点的
+                        // 的数据块长度。（AVIMasterGUI中的ChunkLength）
+}SapleIndex
+```
+下面举例如何计算帧n在文件中的绝对位置和长度：  
+```
+Container *movi     =  (“movi”节点在文件中的偏移) + 8   //+8跳过ID和Size
+SampleIndex *index  =  (“idx1”节点在文件中的偏移) + 8   //+8跳过ID和Size
+帧n位置             =  index[n]->offset + movi + 8      //+8跳过ID和Size
+帧n长度             =  index[n]->len
+```
+![](/posts/avimux_3.png)
