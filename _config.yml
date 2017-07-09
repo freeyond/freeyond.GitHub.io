@@ -12,9 +12,11 @@ url:
 domain: 
 all_categories: [
 ["mediamux", "媒体封装格式","/posts/mediamux.html"], 
+["windowspe", "WINDOWS PE","/posts/windowspe.html"], 
+["linuxelf", "LINUX ELF","/posts/linuxelf.html"], 
 ]
 
-paginate: 2
+paginate: 4
 paginate_path: "posts/page:num"
 timezone: America/Los_Angeles
 
